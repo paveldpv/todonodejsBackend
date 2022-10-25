@@ -11,7 +11,7 @@ const option ={
 module.exports =passport=>{
    passport.use(
       new JWTStrategy(option,async(payload,done)=>{         
-          try {
+          try {            
             const user  = await mongodb.findID(payload.id)
             const email = user.email
             const id    = user._id

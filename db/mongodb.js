@@ -1,80 +1,92 @@
-const { MongoClient ,ObjectId} = require('mongodb');
-const mongoURL        = require('./../keys/mongodbURL')
-
-const url    = mongoURL;
-const client = new MongoClient(url);
-
+const mongoURL = require('./../keys/mongodbURL')
+const mongoose = require('mongoose')
+const Schema   = mongoose.Schema
 
 const dbName = 'test';
+mongoose.connect(`${mongoURL}/${dbName}`)
 
-async function registrate(newUser){
-   await client.connect()   
-   const db         = client.db(dbName)
-   const collection = db.collection(`users`)
-   const addUser    = await collection.insertOne(newUser)
-   console.log(`new Ueser`,addUser);
-}
+const schema = new Schema({  
+  email:String,
+  password:String,
+  initialTodos:[{
+    day:String,
+    number:Number,
+    tasks:[
+      {
+        task:String,
+        id:String
+      }
+    ]
+  }]
+})
+const User = mongoose.model(`users`,schema)
+
 
 async function checkEmail(email){
-  try {   
-   await client.connect()
-   const db    = client.db(dbName)   
-   const colllection = db.collection(`users`)
-   const results = await colllection.find({email:email}).toArray()
-   return results.length===0?true:false  
-  } catch (error) {
-   console.log(err);
-  }  
+ let result =  User.findOne({email:email})
+ return (await result)?false:true
 }
-
+async function registrate(newUser){
+  try {
+    let result =  new User(newUser)
+    await result.save()
+    return true    
+  } catch (error) {
+    console.log(error);
+    return false
+  }
+}
 async function getCanditdate (email){
-  try {
-    await client.connect()
-    const db = client.db(dbName)
-    const collection = db.collection(`users`)
-    let candidate = await collection.findOne({email})    
-    return candidate
-  } catch (error) {
-    console.log(error);
-  }
+  return await User.findOne({email:email})
 }
-
 async function findID(id){
+  
+  return await User.findOne({_id:id})
+}
+async function getTodos(email){
+  return await User.findOne({email:email})
+}
+async function addToDo(Numberday,task,email){
   try {
-    await client.connect()
-    const db = client.db(dbName)
-    const colllection = db.collection(`users`)    
-    let res = await colllection.findOne({_id:ObjectId(id)})
-    return res
+    let bd = await User.findOne({email:email})
+    bd.initialTodos[Numberday].tasks.push(task)
+    await bd.save()   
+    return true    
   } catch (error) {
-    console.log(error);
+      console.log(error);
+      return false
   }
 }
+async function removeToDo(id,number,email){
+try {
+  let res = await User.findOne({email:email})
+  let indexRemove = res.initialTodos[number].tasks.findIndex(value=>value.id==id)
+  res.initialTodos[number].tasks.splice(indexRemove,1)  
+  await res.save()
+  return true
+} catch (error) {
+  console.log(error);
+  return false
+}
+}
+async function redactTodo(id,text,email,day){
+  try {
+    let res =await User.findOne({email:email})
+    let index =  res.initialTodos[day].tasks.findIndex(value=>value.id===id)
+    res.initialTodos[day].tasks[index].task=text
+    await res.save()
+    return true
 
-module.exports= {registrate,checkEmail,getCanditdate,findID}
+  } catch (error) {
+    console.log(error);
+    return false
+
+  }
+
+}
 
 
 
-// async function main() {
-//   // Use connect method to connect to the server
-//   await client.connect();
-//   console.log('Connected successfully to server');
-//   const db         = client.db(dbName);
-//   const collection = db.collection('users');
-  
-//    const update = await collection.updateOne({name:`pavessdsl`},{ $push: { id: `tempNumber`} })
-//    console.log(`ipdate=>`,update);
 
-//   const preteData =await collection.find()
-//   const data       = await collection.find({name:`pavessdsl`}).toArray()
-//   console.log(data);
+module.exports= {registrate,checkEmail,getCanditdate,findID,getTodos,addToDo,removeToDo,redactTodo}
 
-  
-
-//   return 'done.';
-// }
-
-// main()
-//   .then(console.log)
-//   .catch(console.error)
-//   .finally(() => client.close());

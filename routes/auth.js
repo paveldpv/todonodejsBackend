@@ -7,15 +7,19 @@ module.exports = function(app){
    app.post(`/auth`,async(req,res)=>{    
       let email    = req.body.email
       let password = req.body.password
-      if(!await mongodb.checkEmail(email)){                    
+      if(!await mongodb.checkEmail(email)){                  
          let candirate = await mongodb.getCanditdate(email)
-         let resultCheckPassword = bcrypt.compareSync(password,candirate.password)
+         let resultCheckPassword = bcrypt.compareSync(password,candirate.password)         
          if(resultCheckPassword){            
             let token =jwt.sign({
                email:candirate.email,
                id:candirate._id
             },key,{expiresIn:60*60})//первый паратмет информация которую кодируем ,вторая ..., третья время жизни токена в в секундах
-            res.send(`Bearer ${token}`) 
+
+            res.json({
+               bearer:`Bearer ${token}`,
+               auth:true
+            }) 
          }
          else{
             res.send(`invalid password`)
